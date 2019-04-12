@@ -28,8 +28,8 @@ namespace SleepApp
             ToolStripMenuItem menuItem = new ToolStripMenuItem();
             menuItem.Text = "&終了";
             menuItem.Click += new EventHandler(Close_Click);
-            //contextMenuStrip.Items.Add(menuItem);
-            //notifyIcon.ContextMenuStrip = contextMenuStrip;
+            contextMenuStrip.Items.Add(menuItem);
+            notifyIcon.ContextMenuStrip = contextMenuStrip;
 
             // ワーカースレッド
             backgroundWorker = new BackgroundWorker();
@@ -96,7 +96,7 @@ namespace SleepApp
 						break;
 					}
 
-                    //notifyIcon.Text = "スリープまで残り" + sleepController.SleepElapsedTime.ToString() + "秒";
+                    notifyIcon.Text = "スリープまで残り" + sleepController.SleepElapsedTime.ToString() + "秒";
 
                     // プログレスバーの表示範囲内ならば画面を表示
                     if (progressBar.Maximum >= sleepController.SleepElapsedTime)
@@ -119,8 +119,11 @@ namespace SleepApp
                             progressBar.Value = val;
                             SleepTimeLabel.Text = sleepController.SleepElapsedTime.ToString();
 
-                            // 表示状態に変更
-                            this.Visible = true;
+							// 表示状態に変更
+							if (!this.Visible)
+							{
+								this.Visible = true;
+							}
                         });
                     }
 					else
@@ -197,5 +200,5 @@ namespace SleepApp
             }
 #endif
         }
-	}
+    }
 }
