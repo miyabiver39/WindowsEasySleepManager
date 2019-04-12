@@ -17,6 +17,7 @@ namespace SleepApp
 		private BackgroundWorker backgroundWorker;
 
         private bool isForceDown = false;
+        private bool isForceVisible = false;
 
 		/// <summary>
 		/// コンストラクタ
@@ -25,10 +26,16 @@ namespace SleepApp
 		{
 			InitializeComponent();
 
-            ToolStripMenuItem menuItem = new ToolStripMenuItem();
-            menuItem.Text = "&終了";
-            menuItem.Click += new EventHandler(Close_Click);
-            contextMenuStrip.Items.Add(menuItem);
+            ToolStripMenuItem menuItemVisible = new ToolStripMenuItem();
+            menuItemVisible.Text = "&表示";
+            menuItemVisible.Click += new EventHandler(ForceVisible_Click);
+            contextMenuStrip.Items.Add(menuItemVisible);
+
+            ToolStripMenuItem menuItemExit = new ToolStripMenuItem();
+            menuItemExit.Text = "&終了";
+            menuItemExit.Click += new EventHandler(Close_Click);
+            contextMenuStrip.Items.Add(menuItemExit);
+
             notifyIcon.ContextMenuStrip = contextMenuStrip;
 
             // ワーカースレッド
@@ -86,8 +93,8 @@ namespace SleepApp
 
 				while (true)
 				{
-					// 0.1秒スリープ
-					System.Threading.Thread.Sleep(100);
+					// 0.5秒スリープ
+					System.Threading.Thread.Sleep(500);
 					
 					// キャンセルの場合
 					if (worker.CancellationPending)
@@ -96,29 +103,52 @@ namespace SleepApp
 						break;
 					}
 
-                    notifyIcon.Text = "スリープまで残り" + sleepController.SleepElapsedTime.ToString() + "秒";
+                    // プログレスバー適用前にチェック
+                    int val = progressBar.Maximum - sleepController.SleepElapsedTime;
 
-                    // プログレスバーの表示範囲内ならば画面を表示
-                    if (progressBar.Maximum >= sleepController.SleepElapsedTime)
+                    if (progressBar.Maximum < val)
+                    {
+                        val = progressBar.Maximum;
+                    }
+                    else if (val < progressBar.Minimum)
+                    {
+                        val = progressBar.Minimum;
+                    }
+
+                    // 残り時間の表示
+                    string displaysleepElapsedTime = (sleepController.SleepElapsedTime > 9999) ? "+9999" : sleepController.SleepElapsedTime.ToString();
+                    Invoke((MethodInvoker)delegate
+                    {
+                        SleepTimeLabel.Text = displaysleepElapsedTime;
+                    });
+                    notifyIcon.Text = "スリープまで残り" + displaysleepElapsedTime + "秒";
+
+                    // 画面操作
+                    Invoke((MethodInvoker)delegate
+                    {
+                        // プログレスバーの値変更
+                        progressBar.Value = val;
+                    });
+
+                    if (isForceVisible)
+                    {
+                        Invoke((MethodInvoker)delegate
+                        {
+                            // 画面操作
+                            if (!this.Visible)
+                            {
+                                this.Visible = true;
+                            }
+                        });
+                        continue;
+                    }
+
+                    // 表示範囲内ならば画面を表示
+                    if (Program.SleepVisibleTime >= sleepController.SleepElapsedTime)
 					{
-                        // プログレスバー適用前にチェック
-                        int val = progressBar.Maximum - sleepController.SleepElapsedTime;
-                        if (progressBar.Maximum < val)
-                        {
-                            val = progressBar.Maximum;
-                        }
-                        else if (val < progressBar.Minimum)
-                        {
-                            val = progressBar.Minimum;
-                        }
-
                         // 画面操作
                         Invoke((MethodInvoker)delegate
                         {
-                            // プログレスバーの値変更
-                            progressBar.Value = val;
-                            SleepTimeLabel.Text = sleepController.SleepElapsedTime.ToString();
-
 							// 表示状態に変更
 							if (!this.Visible)
 							{
@@ -172,18 +202,31 @@ namespace SleepApp
             {
                 e.Cancel = true;
                 this.Visible = false;
+                isForceVisible = false;
             }
 		}
 
 		private void SleepForm_Shown(object sender, EventArgs e)
 		{
 			this.Visible = false;
-		}
+            isForceVisible = false;
+
+            Invoke((MethodInvoker)delegate
+            {
+                // プログレスバー最大値設定
+                progressBar.Maximum = sleepController.SleepElapsedTime;
+            });
+        }
 
         private void Close_Click(object sender, EventArgs e)
         {
             isForceDown = true;
             Application.Exit();
+        }
+
+        private void ForceVisible_Click(object sender, EventArgs e)
+        {
+            isForceVisible = true;
         }
 
         private void notifyIcon_Click(object sender, EventArgs e)

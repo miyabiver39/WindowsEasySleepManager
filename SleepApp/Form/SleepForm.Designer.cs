@@ -51,11 +51,11 @@
             // SleepTimeLabel
             // 
             this.SleepTimeLabel.Font = new System.Drawing.Font("游ゴシック", 20.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
-            this.SleepTimeLabel.Location = new System.Drawing.Point(248, 9);
+            this.SleepTimeLabel.Location = new System.Drawing.Point(230, 9);
             this.SleepTimeLabel.Name = "SleepTimeLabel";
-            this.SleepTimeLabel.Size = new System.Drawing.Size(46, 35);
+            this.SleepTimeLabel.Size = new System.Drawing.Size(98, 35);
             this.SleepTimeLabel.TabIndex = 1;
-            this.SleepTimeLabel.Text = "00";
+            this.SleepTimeLabel.Text = "+0000";
             this.SleepTimeLabel.TextAlign = System.Drawing.ContentAlignment.TopRight;
             // 
             // progressBar
@@ -63,14 +63,14 @@
             this.progressBar.Location = new System.Drawing.Point(12, 44);
             this.progressBar.Maximum = 60;
             this.progressBar.Name = "progressBar";
-            this.progressBar.Size = new System.Drawing.Size(308, 23);
+            this.progressBar.Size = new System.Drawing.Size(349, 23);
             this.progressBar.TabIndex = 2;
             // 
             // label2
             // 
             this.label2.AutoSize = true;
             this.label2.Font = new System.Drawing.Font("游ゴシック", 20.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
-            this.label2.Location = new System.Drawing.Point(288, 9);
+            this.label2.Location = new System.Drawing.Point(319, 9);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(42, 35);
             this.label2.TabIndex = 3;
@@ -93,7 +93,7 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(332, 79);
+            this.ClientSize = new System.Drawing.Size(373, 79);
             this.Controls.Add(this.label2);
             this.Controls.Add(this.progressBar);
             this.Controls.Add(this.SleepTimeLabel);

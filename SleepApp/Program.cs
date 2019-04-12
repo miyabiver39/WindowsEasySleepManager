@@ -29,6 +29,24 @@ namespace SleepApp
 			}
         }
 
+        public static int SleepVisibleTime
+        {
+            get
+            {
+                lock (_sleepVisibleTimeLock)
+                {
+                    return _sleepVisibleTime;
+                }
+            }
+            set
+            {
+                lock (_sleepVisibleTimeLock)
+                {
+                    _sleepVisibleTime = value;
+                }
+            }
+        }
+
         public static int PermissibleRangeX
         {
             get
@@ -84,10 +102,12 @@ namespace SleepApp
         }
 
         private static int _sleepCheckTime;
+        private static int _sleepVisibleTime;
         private static int _permissibleRangeX;
         private static int _permissibleRangeY;
         private static PowerState _sleepMode;
         private static object _sleepCheckTimeLock = new object();
+        private static object _sleepVisibleTimeLock = new object();
         private static object _permissibleRangeXLock = new object();
         private static object _permissibleRangeYLock = new object();
         private static object _sleepModeLock = new object();
@@ -144,6 +164,7 @@ namespace SleepApp
 		private static void ReadAllSettings()
 		{
             SleepCheckTime = 3600;
+            SleepVisibleTime = 60;
             PermissibleRangeX = 50;
             PermissibleRangeY = 50;
             SleepMode = PowerState.Suspend;
@@ -177,6 +198,10 @@ namespace SleepApp
                         SleepMode = PowerState.Hibernate;
                     }
                 }
+                else if (key == SettingKeys.SleepVisibleTime.ToString())
+                {
+                    SleepVisibleTime = int.Parse(value);
+                }
             }
 		}
 
@@ -185,7 +210,8 @@ namespace SleepApp
 			SleepCheckTime,
             PermissibleRangeX,
             PermissibleRangeY,
-            SleepMode
+            SleepMode,
+            SleepVisibleTime
         }
 	}
 }
