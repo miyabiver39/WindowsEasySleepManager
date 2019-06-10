@@ -1,23 +1,35 @@
 ﻿using Microsoft.Win32;
 using System;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace SleepApp
 {
+    /// <summary>
+    /// スリープまでの残り時間を表示するフォーム
+    /// </summary>
     public partial class SleepForm : Form
     {
         private SleepController sleepController;
-        private BackgroundWorker backgroundWorker;
+        private BackgroundWorker formUpdateWorker;
 
         private bool isForceDown = false;
         private bool isForceVisible = false;
+
+        /// <summary>
+        /// 残り時間ラベルに表示可能な最大値
+        /// </summary>
+        private readonly int ELAPSED_LABEL_DISPLAY_MAX_TIME = 9999;
+
+        /// <summary>
+        /// 通知アイコンの残り時間に表示可能な最大値
+        /// </summary>
+        private readonly int NOTIFY_ICON_DISPLAY_MAX_TIME = 9999;
+
+        /// <summary>
+        /// 画面更新処理の更新チェック間隔
+        /// </summary>
+        private readonly int WORKER_THREAD_SLEEP_TIME = 500;
 
         /// <summary>
         /// コンストラクタ
@@ -26,6 +38,42 @@ namespace SleepApp
         {
             InitializeComponent();
 
+            initializeNotifyIcon();
+
+            initializeFormUpdateWorker();
+        }
+
+        /// <summary>
+        /// 起動状態の変更イベントを
+        /// </summary>
+        private void initializePowerModeChangeEvent()
+        {
+            SystemEvents.PowerModeChanged += (sender, e) =>
+            {
+                switch (e.Mode)
+                {
+                    // スリープ直前
+                    case PowerModes.Suspend:
+                        sleepController.IsCancel = true;
+                        break;
+                    // 復帰直後
+                    case PowerModes.Resume:
+                        sleepController.DoStartAsync();
+                        break;
+                    // バッテリーや電源に関する通知があった
+                    case PowerModes.StatusChange:
+                        break;
+                    default:
+                        break;
+                }
+            };
+        }
+
+        /// <summary>
+        /// 通知アイコンの初期化
+        /// </summary>
+        private void initializeNotifyIcon()
+        {
             ToolStripMenuItem menuItemVisible = new ToolStripMenuItem();
             menuItemVisible.Text = "&表示";
             menuItemVisible.Click += new EventHandler(ToolStripMenuItem_ForceVisible);
@@ -37,47 +85,25 @@ namespace SleepApp
             contextMenuStrip.Items.Add(menuItemExit);
 
             notifyIcon.ContextMenuStrip = contextMenuStrip;
+        }
 
+        /// <summary>
+        /// フォーム更新ワーカーの初期化
+        /// </summary>
+        private void initializeFormUpdateWorker()
+        {
             // ワーカースレッド
-            backgroundWorker = new BackgroundWorker();
-            backgroundWorker.WorkerSupportsCancellation = true;
-            backgroundWorker.WorkerReportsProgress = true;
+            formUpdateWorker = new BackgroundWorker();
+            formUpdateWorker.WorkerSupportsCancellation = true;
+            formUpdateWorker.WorkerReportsProgress = true;
 
-            backgroundWorker.DoWork += new DoWorkEventHandler(backgroundWorker_doWork);
-            backgroundWorker.RunWorkerCompleted += new RunWorkerCompletedEventHandler(backgroundWorker_RunWorkerCompleted);
+            formUpdateWorker.DoWork += new DoWorkEventHandler(backgroundWorker_doWork);
+            formUpdateWorker.RunWorkerCompleted += new RunWorkerCompletedEventHandler(backgroundWorker_RunWorkerCompleted);
 
             sleepController = new SleepController(100, Program.SleepCheckTime);
             sleepController.DoStartAsync();
 
-            backgroundWorker.RunWorkerAsync();
-
-            SystemEvents.PowerModeChanged += (sender, e) =>
-            {
-                switch (e.Mode)
-                {
-                    case PowerModes.Suspend:
-                        // スリープ直前
-                        sleepController.IsCancel = true;
-                        break;
-                    case PowerModes.Resume:
-                        sleepController.DoStartAsync();
-                        // 復帰直後
-                        break;
-                    case PowerModes.StatusChange:
-                        // バッテリーや電源に関する通知があった
-                        break;
-                }
-            };
-        }
-
-        /// <summary>
-        /// ロードイベント
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void SleepForm_Load(object sender, EventArgs e)
-        {
-            this.Visible = false;
+            formUpdateWorker.RunWorkerAsync();
         }
 
         /// <summary>
@@ -93,107 +119,50 @@ namespace SleepApp
 
                 while (true)
                 {
-                    // 0.5秒スリープ
-                    System.Threading.Thread.Sleep(500);
-
-                    // キャンセルの場合
+                    // キャンセルの場合はループ終了
                     if (worker.CancellationPending)
                     {
                         e.Cancel = true;
                         break;
                     }
 
-                    // プログレスバー適用前に値が範囲内に当てはまるようにする
-                    int progressBarVal = progressBar.Maximum - sleepController.SleepElapsedTime;
 
-                    // プログレスバー以上ならば、プログレスバーの最大値を指定
-                    if (progressBar.Maximum < progressBarVal)
-                    {
-                        progressBarVal = progressBar.Maximum;
-                    }
-                    // プログレスバー以下ならば、プログレスバーの最低値を指定
-                    else if (progressBarVal < progressBar.Minimum)
-                    {
-                        progressBarVal = progressBar.Minimum;
-                    }
+                    // プログレスバーに値を設定
+                    updateProgressBar(sleepController.SleepElapsedTime);
 
-                    // 残り時間
-                    string displaysleepElapsedTime;
+                    // 残り時間ラベルに値を反映
+                    updateElapsedTimeLabel(sleepController.SleepElapsedTime);
 
-                    // 残り時間が9999秒以上ならば
-                    if (sleepController.SleepElapsedTime > 9999)
-                    {
-                        displaysleepElapsedTime = "+9999";
-                    }
-                    // それ以外
-                    else {
-                        displaysleepElapsedTime = sleepController.SleepElapsedTime.ToString();
-                    }
+                    // 通知アイコンの残り時間に値を反映
+                    updateElapsedTimeNotifyIcon(sleepController.SleepElapsedTime);
 
-                    // 画面の残り時間を反映
-                    Invoke((MethodInvoker)delegate
-                    {
-                        SleepTimeLabel.Text = displaysleepElapsedTime;
-                    });
-
-                    // 通知アイコンの残り時間を反映
-                    notifyIcon.Text = "スリープまで残り" + displaysleepElapsedTime + "秒";
-
-                    // 画面操作
-                    Invoke((MethodInvoker)delegate
-                    {
-                        // プログレスバーの値変更
-                        progressBar.Value = progressBarVal;
-                    });
 
                     // 強制表示状態ならば
                     if (isForceVisible)
                     {
-                        Invoke((MethodInvoker)delegate
-                        {
-                            // 画面操作
-                            if (!this.Visible)
-                            {
-                                this.Visible = true;
-                            }
-                        });
+                        changeVisibleForm(true);
+
                         continue;
                     }
 
                     // 表示範囲内ならば画面を表示
                     if (Program.SleepVisibleTime >= sleepController.SleepElapsedTime)
                     {
-                        // 画面操作
-                        Invoke((MethodInvoker)delegate
-                        {
-                            // 表示状態に変更
-                            if (!this.Visible)
-                            {
-                                this.Visible = true;
-                            }
+                        changeVisibleForm(true);
 
-                            // 最前面に表示
-                            if (!this.TopMost)
-                            {
-                                this.TopMost = true;
-                            }
-                        });
+                        changeTopMostForm(true);
                     }
                     // 表示範囲外ならば
                     else
                     {
-                        // 画面操作
-                        Invoke((MethodInvoker)delegate
-                        {
-                            // 非表示状態に変更
-                            if (this.Visible)
-                            {
-                                this.Visible = false;
-                            }
-                        });
+                        changeVisibleForm(false);
+
                         continue;
                     }
                 }
+
+                // スリープ
+                System.Threading.Thread.Sleep(WORKER_THREAD_SLEEP_TIME);
             }
             catch (Exception ex)
             {
@@ -210,11 +179,131 @@ namespace SleepApp
         /// <param name="e"></param>
         private void backgroundWorker_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
         {
-            // 再起動させる
             Program.logger.Info("情報：ReStart");
+
+            // 再起動させる
             sleepController.IsCancel = true;
             sleepController.DoStartAsync();
-            backgroundWorker.RunWorkerAsync();
+            formUpdateWorker.RunWorkerAsync();
+        }
+
+
+        #region プライベートメソッド
+        /// <summary>
+        /// プログレスバーを更新する
+        /// </summary>
+        /// <param name="value">更新する値</param>
+        private void updateProgressBar(int value)
+        {
+            // プログレスバー適用前に値が範囲内に当てはまるようにする
+            int progressBarValue = progressBar.Maximum - value;
+
+            // プログレスバー以上ならば、プログレスバーの最大値を指定
+            if (progressBar.Maximum < value)
+            {
+                progressBarValue = progressBar.Maximum;
+            }
+            // プログレスバー以下ならば、プログレスバーの最低値を指定
+            else if (progressBarValue < progressBar.Minimum)
+            {
+                progressBarValue = progressBar.Minimum;
+            }
+
+            // 画面操作
+            Invoke((MethodInvoker)delegate
+            {
+                // プログレスバーの値変更
+                progressBar.Value = progressBarValue;
+            });
+        }
+
+        /// <summary>
+        /// 残り時間ラベルを更新する
+        /// </summary>
+        /// <param name="value">更新する値</param>
+        private void updateElapsedTimeLabel(int value)
+        {
+            // 残り時間
+            string displaysleepElapsedTime = value.ToString();
+
+            // 残り時間が既定値以上ならば
+            if (value > ELAPSED_LABEL_DISPLAY_MAX_TIME)
+            {
+                displaysleepElapsedTime = "+" + ELAPSED_LABEL_DISPLAY_MAX_TIME.ToString();
+            }
+
+            // 画面の残り時間を反映
+            Invoke((MethodInvoker)delegate
+            {
+                SleepTimeLabel.Text = displaysleepElapsedTime;
+            });
+        }
+
+        /// <summary>
+        /// 通知アイコンの残り時間ラベルを更新する
+        /// </summary>
+        /// <param name="value">更新する値</param>
+        private void updateElapsedTimeNotifyIcon(int value)
+        {
+            string displaysleepElapsedTime = value.ToString();
+
+            // 残り時間が既定値以上ならば
+            if (value > NOTIFY_ICON_DISPLAY_MAX_TIME)
+            {
+                displaysleepElapsedTime = "+" + NOTIFY_ICON_DISPLAY_MAX_TIME.ToString();
+            }
+
+            // 画面の残り時間を反映
+            Invoke((MethodInvoker)delegate
+            {
+                // 通知アイコンの残り時間を反映
+                notifyIcon.Text = "スリープまで残り" + displaysleepElapsedTime + "秒";
+            });
+        }
+
+        /// <summary>
+        /// フォームを表示する
+        /// </summary>
+        /// <param name="value">更新する値</param>
+        private void changeVisibleForm(bool value)
+        {
+            Invoke((MethodInvoker)delegate
+            {
+                if (!this.Visible)
+                {
+                    this.Visible = value;
+                }
+
+            });
+        }
+
+        /// <summary>
+        /// 最前面に表示する
+        /// </summary>
+        /// <param name="value">更新する値</param>
+        private void changeTopMostForm(bool value)
+        {
+            Invoke((MethodInvoker)delegate
+            {
+                if (!this.TopMost)
+                {
+                    this.TopMost = value;
+                }
+
+            });
+        }
+        #endregion
+
+
+        #region イベント
+        /// <summary>
+        /// ロードイベント
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void SleepForm_Load(object sender, EventArgs e)
+        {
+            this.Visible = false;
         }
 
         /// <summary>
@@ -270,24 +359,6 @@ namespace SleepApp
             isForceVisible = true;
         }
 
-        /// <summary>
-        /// 通知アイコンクリックイベント
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void notifyIcon_Click(object sender, EventArgs e)
-        {
-            // 表示する必要はないので無効
-#if false
-            if (this.Visible)
-            {
-                this.Visible = false;
-            }
-            else
-            {
-                this.Visible = true;
-            }
-#endif
-        }
+        #endregion
     }
 }
