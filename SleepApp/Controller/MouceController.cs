@@ -6,22 +6,22 @@ using System.Threading.Tasks;
 
 namespace SleepApp
 {
-	class MouceController
-	{
-		/// <summary>
-		/// X座標
-		/// </summary>
-		private int _moucePointX;
+    class MouceController
+    {
+        /// <summary>
+        /// X座標
+        /// </summary>
+        private int _moucePointX;
 
-		/// <summary>
-		/// Y座標
-		/// </summary>
-		private int _moucePointY;
+        /// <summary>
+        /// Y座標
+        /// </summary>
+        private int _moucePointY;
 
-		/// <summary>
-		/// 移動したか
-		/// </summary>
-		private bool _isMove;
+        /// <summary>
+        /// 移動したか
+        /// </summary>
+        private bool _isMove;
 
         /// <summary>
         /// X座標許容範囲
@@ -37,8 +37,8 @@ namespace SleepApp
         /// 移動したか
         /// </summary>
         public bool IsMove
-		{
-			get { return _isMove; }
+        {
+            get { return _isMove; }
         }
 
         /// <summary>
@@ -48,7 +48,7 @@ namespace SleepApp
         {
             set { _permissibleRangeX = value; }
         }
-        
+
         /// <summary>
         /// Y座標許容範囲
         /// </summary>
@@ -61,23 +61,23 @@ namespace SleepApp
         /// コンストラクタ
         /// </summary>
         public MouceController ()
-		{
-			_isMove = false;
-			_moucePointX = System.Windows.Forms.Cursor.Position.X;
-			_moucePointY = System.Windows.Forms.Cursor.Position.Y;
+        {
+            _isMove = false;
+            _moucePointX = System.Windows.Forms.Cursor.Position.X;
+            _moucePointY = System.Windows.Forms.Cursor.Position.Y;
             _permissibleRangeX = Program.PermissibleRangeX;
             _permissibleRangeY = Program.PermissibleRangeY;
 
         }
 
-		/// <summary>
-		/// 移動チェック
-		/// </summary>
-		public void  MouceMoveCheck()
-		{
-			int new_mouce_point_x = System.Windows.Forms.Cursor.Position.X;
-			int new_mouce_point_y = System.Windows.Forms.Cursor.Position.Y;
-            
+        /// <summary>
+        /// 移動チェック
+        /// </summary>
+        public void  MouceMoveCheck()
+        {
+            int new_mouce_point_x = System.Windows.Forms.Cursor.Position.X;
+            int new_mouce_point_y = System.Windows.Forms.Cursor.Position.Y;
+
             // X座標移動量チェック
             if (_moucePointX - _permissibleRangeX <= new_mouce_point_x && new_mouce_point_x <= _moucePointX + _permissibleRangeX &&
                 _moucePointY - _permissibleRangeY <= new_mouce_point_y && new_mouce_point_y <= _moucePointY + _permissibleRangeY)
@@ -91,5 +91,5 @@ namespace SleepApp
                 _moucePointY = new_mouce_point_y;
             }
         }
-	}
+    }
 }
