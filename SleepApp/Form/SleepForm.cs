@@ -154,6 +154,11 @@ namespace SleepApp
 							{
 								this.Visible = true;
 							}
+
+                            if (!this.TopMost)
+                            {
+                                this.TopMost = true;
+                            }
                         });
                     }
 					else
