@@ -155,6 +155,7 @@ namespace SleepApp
 								this.Visible = true;
 							}
 
+                            // 最前面に表示
                             if (!this.TopMost)
                             {
                                 this.TopMost = true;
