@@ -119,6 +119,9 @@ namespace SleepApp
 
                 while (true)
                 {
+                    // スリープ
+                    System.Threading.Thread.Sleep(WORKER_THREAD_SLEEP_TIME);
+
                     // キャンセルの場合はループ終了
                     if (worker.CancellationPending)
                     {
@@ -161,8 +164,6 @@ namespace SleepApp
                     }
                 }
 
-                // スリープ
-                System.Threading.Thread.Sleep(WORKER_THREAD_SLEEP_TIME);
             }
             catch (Exception ex)
             {
